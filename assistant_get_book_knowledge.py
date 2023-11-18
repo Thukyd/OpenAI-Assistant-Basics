@@ -1,8 +1,10 @@
 """
-    Example to show how to use the OpenAI assistants work.
+    Example to show how to use the OpenAI assistants to answer to files.
 
     To get more information about the OpenAI Asssistants, see the documentation: https://platform.openai.com/docs/assistants/how-it-works/objects
-    At creation time it was still in beta. 
+    At creation time it was still in beta. Async is not supported for all yet.
+
+    I used following file: https://www.anglo-catalan.org/downloads/acsop-monographs/issue01.pdf
 """
 
 import os
@@ -32,6 +34,27 @@ def initialize_openai_client():
 client = initialize_openai_client()
 
 ####################################################################################################
+### B) Hand over a file to OpenAI
+"""
+    I used following file: https://www.anglo-catalan.org/downloads/acsop-monographs/issue01.pdf
+
+    There is no async support for this yet. I also couldn't find a way to check if the file has been processed yet.
+    That's why it's just waiting for 5 seconds.
+"""
+
+file = client.files.create(
+    file=open("THE_SOCIAL_STRUCTURE_OF_CATALONIA.pdf", "rb"),
+    purpose="assistants"
+)
+
+# Wait for second before checking again
+logging.info(f'Waiting for the file to be processed by OpenAI')
+time.sleep(5)
+logging.info(f'File has been processed by OpenAI: {file}')
+
+
+
+####################################################################################################
 ### B) Create an assistant
 """
     Purpose-built AI that uses OpenAI’s models and calls tools.
@@ -41,10 +64,11 @@ client = initialize_openai_client()
 
 # Create a new assistant
 assistant = client.beta.assistants.create(
-    name = "Math Tutor",
-    instructions = "You are a personal math tutor. Write and run code to answer math questions.",
-    tools = [{"type": "code_interpreter"}], # The tools that the assistant can use, her it is the code interpreter tool, could be also file interpreter etc.
-    model = "gpt-4-1106-preview" # The newes model that support assistants
+    name = "Get Book Knowledge",
+    instructions = "You are a historian. Answer questions on the 'The Social Structure of Catalonia' by using the book which was published in 1984.",
+    tools = [{"type": "retrieval"}], # The tools that the assistant can use, her it is the code interpreter tool, could be also file interpreter etc.
+    model = "gpt-4-1106-preview", # The newes model that support assistants
+    file_ids = [file.id], # reference to the file
 )
 
 ####################################################################################################
@@ -67,7 +91,7 @@ logging.info(f'Thread Object: {thread}')  # DEBUG: Info about the thread object
 message = client.beta.threads.messages.create(
     thread_id = thread.id, # To which thread do you want to link the message to?
     role = "user",
-    content = "Solve this problem: 3x + 11 = 14" # The message that you would normally send to the assistant. 
+    content = "Explain the rise of catalan capitalism." # The message that you would normally send to the assistant. 
 )
 logging.info(f'Message Object: {message}')  # DEBUG: Info about the message object
 
@@ -84,8 +108,6 @@ run = client.beta.threads.runs.create(
     thread_id = thread.id,
     assistant_id = assistant.id
 )
-
-
 
 
 ####################################################################################################
@@ -106,8 +128,8 @@ while True:
     if run_status == 'completed':
         break  # Exit the loop if completed
 
-    # Wait for 1 second before checking again
-    time.sleep(1)
+    # Wait for 5 second before checking again
+    time.sleep(5)
 
 # Continue with your script after the run is completed
 logging.debug(f'Run completed with status: {run_status}')
@@ -124,7 +146,7 @@ messages = client.beta.threads.messages.list(
 # Print out all the messages that have been sent between the user and the assistant
 #   in reverse because the oldest messages should be shown first
 print("\n\n### Messages ###")
+message_count = 0
 for message in reversed(messages.data):
-    print(message.role + ": " + message.content[0].text.value)
-
-
+    message_count += 1
+    print("Message #" + str(message_count) + " = " + message.role + ": " + message.content[0].text.value + "\n\n")
