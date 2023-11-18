@@ -91,7 +91,7 @@ logging.info(f'Thread Object: {thread}')  # DEBUG: Info about the thread object
 message = client.beta.threads.messages.create(
     thread_id = thread.id, # To which thread do you want to link the message to?
     role = "user",
-    content = "Explain the rise of catalan capitalism." # The message that you would normally send to the assistant. 
+    content = "Explain the rise of Catalan capitalism." # The message that you would normally send to the assistant. 
 )
 logging.info(f'Message Object: {message}')  # DEBUG: Info about the message object
 
